@@ -68,6 +68,8 @@ export function formatTable(result: ScanResult): string {
 
   lines.push(table.toString());
   lines.push("");
+  lines.push(chalk.gray("  Note: ClawScan detects known patterns only. A passing grade is not a guarantee of safety."));
+  lines.push("");
 
   return lines.join("\n");
 }

@@ -17,7 +17,7 @@ export function parseFrontmatter(raw: string): { frontmatter: SkillFrontmatter; 
 
   let frontmatter: SkillFrontmatter;
   try {
-    const parsed = parseYaml(yamlStr);
+    const parsed = parseYaml(yamlStr, { maxAliasCount: 100 });
     frontmatter = typeof parsed === "object" && parsed !== null ? (parsed as SkillFrontmatter) : {};
   } catch {
     frontmatter = {};

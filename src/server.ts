@@ -303,7 +303,7 @@ const HTML = `<!DOCTYPE html>
   <div class="header">
     <div>
       <h1><span class="icon">🔒</span> ClawScan</h1>
-      <div class="subtitle">Security Scanner for OpenClaw / ClawHub Skills</div>
+      <div class="subtitle">Security Scanner for OpenClaw / ClawHub Skills &mdash; <span style="color:var(--medium)">Grades reflect detected patterns only, not a guarantee of safety</span></div>
     </div>
     <div class="scan-bar">
       <input type="text" id="scanPath" placeholder="Enter ClawHub URL or local skill path..." />
@@ -440,16 +440,51 @@ const HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
+// Rate limiter: per-IP, 20 requests per minute
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 20;
+const RATE_WINDOW_MS = 60_000;
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+  entry.count++;
+  return entry.count <= RATE_LIMIT;
+}
+
+// Path traversal guard: block ../ sequences and paths outside allowed roots
+function isPathSafe(inputPath: string): boolean {
+  const resolved = resolve(inputPath);
+  // Block any path containing .. after resolution that escapes home or project dirs
+  if (inputPath.includes("..")) return false;
+  // Block access to sensitive system directories
+  const blocked = ["/etc/", "/proc/", "/sys/", "/dev/", "/var/run/", "/private/etc/"];
+  return !blocked.some(prefix => resolved.startsWith(prefix));
+}
+
 const server = Bun.serve({
   port: PORT,
   async fetch(req) {
     const url = new URL(req.url);
+    const clientIp = server.requestIP(req)?.address || "unknown";
 
     if (url.pathname === "/" || url.pathname === "") {
       return new Response(HTML, { headers: { "Content-Type": "text/html" } });
     }
 
     if (url.pathname === "/api/scan") {
+      // Rate limiting
+      if (!checkRateLimit(clientIp)) {
+        return Response.json(
+          { error: "Rate limit exceeded. Max 20 scans per minute." },
+          { status: 429 }
+        );
+      }
+
       let scanTarget = url.searchParams.get("path") || "";
 
       if (!scanTarget) {
@@ -462,6 +497,14 @@ const server = Bun.serve({
           const skillDir = await fetchSkillFromUrl(scanTarget);
           const result = await scanPath(skillDir);
           return Response.json(result);
+        }
+
+        // Path traversal protection
+        if (!isPathSafe(scanTarget) && scanTarget !== "fixtures") {
+          return Response.json(
+            { error: "Blocked: path traversal or access to restricted directory." },
+            { status: 403 }
+          );
         }
 
         // Local path scanning
