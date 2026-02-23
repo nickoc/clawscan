@@ -1,0 +1,25 @@
+{
+  "name": "clawscan",
+  "version": "0.1.0",
+  "description": "Security scanner for OpenClaw/ClawHub skills",
+  "type": "module",
+  "bin": {
+    "clawscan": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "bun src/index.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build": "bun build --compile src/index.ts --outfile clawscan"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "cli-table3": "^0.6.5",
+    "commander": "^12.1.0",
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.0"
+  }
+}
