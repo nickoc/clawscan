@@ -9,6 +9,38 @@ import type { ScanResult } from "./types.js";
 
 const PORT = parseInt(process.env.PORT || "3847");
 const HOSTED_MODE = process.env.HOSTED_MODE === "true";
+const STATS_SECRET = process.env.STATS_SECRET || "";
+
+const analytics = {
+  startedAt: new Date().toISOString(),
+  pageViews: 0,
+  uniqueIPs: new Set<string>(),
+  referrers: new Map<string, number>(),
+  scans: { total: 0, url: 0, fixtures: 0, blocked: 0 },
+  topSkills: new Map<string, number>(),
+};
+
+function isBot(ua: string): boolean {
+  return /bot|crawler|spider/i.test(ua);
+}
+
+function trackPageView(req: Request, clientIp: string): void {
+  const ua = req.headers.get("user-agent") || "";
+  if (isBot(ua)) return;
+
+  analytics.pageViews++;
+  analytics.uniqueIPs.add(clientIp);
+
+  const referer = req.headers.get("referer");
+  if (referer) {
+    try {
+      const domain = new URL(referer).hostname;
+      analytics.referrers.set(domain, (analytics.referrers.get(domain) || 0) + 1);
+    } catch {}
+  } else {
+    analytics.referrers.set("direct", (analytics.referrers.get("direct") || 0) + 1);
+  }
+}
 
 async function scanPath(skillPath: string): Promise<ScanResult> {
   const skill = await parseSkill(skillPath);
@@ -474,6 +506,7 @@ const server = Bun.serve({
     const clientIp = server.requestIP(req)?.address || "unknown";
 
     if (url.pathname === "/" || url.pathname === "") {
+      trackPageView(req, clientIp);
       return new Response(HTML, { headers: { "Content-Type": "text/html" } });
     }
 
@@ -492,16 +525,21 @@ const server = Bun.serve({
         return Response.json({ error: "Missing 'path' parameter" }, { status: 400 });
       }
 
+      analytics.scans.total++;
+
       try {
         // Handle ClawHub URLs — fetch skill remotely then scan
         if (isClawHubUrl(scanTarget)) {
+          analytics.scans.url++;
           const skillDir = await fetchSkillFromUrl(scanTarget);
           const result = await scanPath(skillDir);
+          analytics.topSkills.set(result.skill, (analytics.topSkills.get(result.skill) || 0) + 1);
           return Response.json(result);
         }
 
         // Hosted mode: only allow ClawHub URLs and fixtures
         if (HOSTED_MODE && scanTarget !== "fixtures") {
+          analytics.scans.blocked++;
           return Response.json(
             { error: "Local path scanning is disabled on the hosted service. Use a ClawHub URL instead." },
             { status: 403 }
@@ -510,6 +548,7 @@ const server = Bun.serve({
 
         // Path traversal protection
         if (!isPathSafe(scanTarget) && scanTarget !== "fixtures") {
+          analytics.scans.blocked++;
           return Response.json(
             { error: "Blocked: path traversal or access to restricted directory." },
             { status: 403 }
@@ -518,6 +557,7 @@ const server = Bun.serve({
 
         // Local path scanning
         if (scanTarget === "fixtures") {
+          analytics.scans.fixtures++;
           scanTarget = resolve(import.meta.dir, "..", "tests", "fixtures");
         } else {
           scanTarget = resolve(scanTarget);
@@ -541,6 +581,22 @@ const server = Bun.serve({
           { status: 400 }
         );
       }
+    }
+
+    if (url.pathname === "/api/stats") {
+      if (!STATS_SECRET || url.searchParams.get("secret") !== STATS_SECRET) {
+        return new Response("Not found", { status: 404 });
+      }
+      const uptimeMs = Date.now() - new Date(analytics.startedAt).getTime();
+      return Response.json({
+        startedAt: analytics.startedAt,
+        uptimeHours: Math.round((uptimeMs / 3_600_000) * 100) / 100,
+        pageViews: analytics.pageViews,
+        uniqueVisitors: analytics.uniqueIPs.size,
+        referrers: Object.fromEntries(analytics.referrers),
+        scans: analytics.scans,
+        topSkills: Object.fromEntries(analytics.topSkills),
+      });
     }
 
     return new Response("Not found", { status: 404 });
