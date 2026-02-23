@@ -3,6 +3,7 @@ import { parseSkill } from "./parser/skill-parser.js";
 import { runRules } from "./rules/index.js";
 import { buildScanResult } from "./scorer.js";
 import { findSkillDirs } from "./utils/walk-dir.js";
+import { fetchSkillFromUrl, isClawHubUrl } from "./utils/fetch-skill.js";
 import { basename, resolve } from "path";
 import type { ScanResult } from "./types.js";
 
@@ -305,7 +306,7 @@ const HTML = `<!DOCTYPE html>
       <div class="subtitle">Security Scanner for OpenClaw / ClawHub Skills</div>
     </div>
     <div class="scan-bar">
-      <input type="text" id="scanPath" placeholder="Enter skill path or directory to scan..." />
+      <input type="text" id="scanPath" placeholder="Enter ClawHub URL or local skill path..." />
       <button id="scanBtn" onclick="doScan()">Scan</button>
     </div>
   </div>
@@ -360,7 +361,7 @@ const HTML = `<!DOCTYPE html>
     function renderDetail() {
       const panel = document.getElementById('detailPanel');
       if (!allResults.length) {
-        panel.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Enter a skill path above and click Scan to get started.</p></div>';
+        panel.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Enter a ClawHub URL or local skill path above and click Scan.</p></div>';
         return;
       }
       const r = allResults[activeIndex];
@@ -451,13 +452,25 @@ const server = Bun.serve({
     if (url.pathname === "/api/scan") {
       let scanTarget = url.searchParams.get("path") || "";
 
-      if (scanTarget === "fixtures") {
-        scanTarget = resolve(import.meta.dir, "..", "tests", "fixtures");
-      } else {
-        scanTarget = resolve(scanTarget);
+      if (!scanTarget) {
+        return Response.json({ error: "Missing 'path' parameter" }, { status: 400 });
       }
 
       try {
+        // Handle ClawHub URLs — fetch skill remotely then scan
+        if (isClawHubUrl(scanTarget)) {
+          const skillDir = await fetchSkillFromUrl(scanTarget);
+          const result = await scanPath(skillDir);
+          return Response.json(result);
+        }
+
+        // Local path scanning
+        if (scanTarget === "fixtures") {
+          scanTarget = resolve(import.meta.dir, "..", "tests", "fixtures");
+        } else {
+          scanTarget = resolve(scanTarget);
+        }
+
         const stat = await Bun.file(resolve(scanTarget, "SKILL.md")).exists();
 
         if (stat) {

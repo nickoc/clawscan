@@ -1,5 +1,9 @@
 # ClawScan
 
+[![CI](https://github.com/nickoc/clawscan/actions/workflows/ci.yml/badge.svg)](https://github.com/nickoc/clawscan/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/clawscan)](https://www.npmjs.com/package/clawscan)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 Security scanner for [OpenClaw](https://docs.openclaw.ai) and ClawHub skills. Detects credential leaks, data exfiltration, prompt injection, supply chain risks, malware patterns, and more.
 
 ## Why
