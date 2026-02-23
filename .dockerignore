@@ -1,0 +1,10 @@
+node_modules
+.git
+.github
+dist
+*.tgz
+.env
+.env.*
+LAUNCH-POSTS.md
+tests/**
+!tests/fixtures/

@@ -7,7 +7,8 @@ import { fetchSkillFromUrl, isClawHubUrl } from "./utils/fetch-skill.js";
 import { basename, resolve } from "path";
 import type { ScanResult } from "./types.js";
 
-const PORT = 3847;
+const PORT = parseInt(process.env.PORT || "3847");
+const HOSTED_MODE = process.env.HOSTED_MODE === "true";
 
 async function scanPath(skillPath: string): Promise<ScanResult> {
   const skill = await parseSkill(skillPath);
@@ -497,6 +498,14 @@ const server = Bun.serve({
           const skillDir = await fetchSkillFromUrl(scanTarget);
           const result = await scanPath(skillDir);
           return Response.json(result);
+        }
+
+        // Hosted mode: only allow ClawHub URLs and fixtures
+        if (HOSTED_MODE && scanTarget !== "fixtures") {
+          return Response.json(
+            { error: "Local path scanning is disabled on the hosted service. Use a ClawHub URL instead." },
+            { status: 403 }
+          );
         }
 
         // Path traversal protection
