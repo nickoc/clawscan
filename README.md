@@ -6,6 +6,8 @@
 
 Security scanner for [OpenClaw](https://docs.openclaw.ai) and ClawHub skills. Detects credential leaks, data exfiltration, prompt injection, supply chain risks, malware patterns, and more.
 
+**[Try it live at getclawscan.com](https://getclawscan.com)** — scan any ClawHub skill by URL, no install needed.
+
 ## Why
 
 OpenClaw skills have full access to your system — files, shell, network, credentials. Before you install one, you should know what it does. ClawScan statically analyzes skill directories and reports security findings with severity grades.
@@ -65,14 +67,18 @@ clawscan scan /path/to/skill --ci --fail-on critical
 clawscan batch /path/to/skills/ --ci --fail-on high
 ```
 
-### Web dashboard
+### Hosted scanner
+
+Scan any ClawHub skill instantly at **[getclawscan.com](https://getclawscan.com)** — no install required.
+
+### Local web dashboard
 
 ```bash
 bun src/server.ts
 # Opens at http://localhost:3847
 ```
 
-Interactive dashboard for scanning skills and browsing findings.
+Interactive dashboard for scanning skills and browsing findings. Supports both ClawHub URLs and local paths.
 
 ## What it checks
 
