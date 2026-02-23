@@ -3,6 +3,30 @@
   "version": "0.1.0",
   "description": "Security scanner for OpenClaw/ClawHub skills",
   "type": "module",
+  "license": "MIT",
+  "author": "Nick O'Connor",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nickoc/clawscan.git"
+  },
+  "homepage": "https://github.com/nickoc/clawscan",
+  "keywords": [
+    "openclaw",
+    "clawhub",
+    "security",
+    "scanner",
+    "static-analysis",
+    "skills",
+    "ai-safety"
+  ],
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "files": [
+    "src/**/*.ts",
+    "README.md",
+    "LICENSE"
+  ],
   "bin": {
     "clawscan": "./src/index.ts"
   },
