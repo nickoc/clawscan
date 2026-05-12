@@ -35,6 +35,20 @@ clawscan scan /path/to/skill
 bun src/index.ts scan /path/to/skill
 ```
 
+### Scan a published OpenClaw package
+
+Some plugins publish their `SKILL.md` inside an npm package. Pack and extract the package, then scan the skill directory:
+
+```bash
+mkdir -p /tmp/clawscan-tweetclaw-scan
+cd /tmp/clawscan-tweetclaw-scan
+npm pack @xquik/tweetclaw@1.6.27 --silent
+tar -xzf xquik-tweetclaw-1.6.27.tgz
+clawscan scan ./package/skills/tweetclaw
+```
+
+This example scans TweetClaw's packaged OpenClaw skill for X/Twitter automation. A passing grade means ClawScan did not detect known risky patterns, not that the package is guaranteed safe.
+
 ### Batch scan all skills in a directory
 
 ```bash
